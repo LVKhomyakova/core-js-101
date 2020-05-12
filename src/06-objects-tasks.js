@@ -20,8 +20,12 @@
  *    console.log(r.height);      // => 20
  *    console.log(r.getArea());   // => 200
  */
-function Rectangle(/* width, height */) {
-  throw new Error('Not implemented');
+function Rectangle(width, height) {
+  return {
+    width,
+    height,
+    getArea() { return width * height; },
+  };
 }
 
 
@@ -35,8 +39,8 @@ function Rectangle(/* width, height */) {
  *    [1,2,3]   =>  '[1,2,3]'
  *    { width: 10, height : 20 } => '{"height":10,"width":20}'
  */
-function getJSON(/* obj */) {
-  throw new Error('Not implemented');
+function getJSON(obj) {
+  return JSON.stringify(obj);
 }
 
 
@@ -51,8 +55,10 @@ function getJSON(/* obj */) {
  *    const r = fromJSON(Circle.prototype, '{"radius":10}');
  *
  */
-function fromJSON(/* proto, json */) {
-  throw new Error('Not implemented');
+function fromJSON(proto, json) {
+  const obj = Object.create(proto);
+  Object.assign(obj, JSON.parse(json));
+  return obj;
 }
 
 
@@ -109,36 +115,104 @@ function fromJSON(/* proto, json */) {
  *
  *  For more examples see unit tests.
  */
+class CssSelectorBuilder {
+  constructor() {
+    this.selectors = [{ selectorName: '', selector: '' }];
+    this.order = ['', 'element', 'id', 'class', 'attr', 'pseudoClass', 'pseudoElement'];
+  }
 
-const cssSelectorBuilder = {
-  element(/* value */) {
-    throw new Error('Not implemented');
-  },
+  element(value) {
+    const self = new CssSelectorBuilder();
+    self.selectors = this.selectors.slice();
+    const prevSelector = self.selectors.pop();
+    if (prevSelector.selectorName === 'element') {
+      throw new Error('Element, id and pseudo-element should not occur more then one time inside the selector');
+    }
+    if (self.order.slice(2).includes(prevSelector.selectorName)) {
+      throw new Error('Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element');
+    }
+    self.selectors.push({ selectorName: 'element', selector: value });
+    return self;
+  }
 
-  id(/* value */) {
-    throw new Error('Not implemented');
-  },
+  id(value) {
+    const self = new CssSelectorBuilder();
+    self.selectors = this.selectors.slice();
+    const prevSelector = self.selectors.pop();
+    if (prevSelector.selectorName === 'id') {
+      throw new Error('Element, id and pseudo-element should not occur more then one time inside the selector');
+    }
+    if (self.order.slice(3).includes(prevSelector.selectorName)) {
+      throw new Error('Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element');
+    }
+    self.selectors.push(prevSelector);
+    self.selectors.push({ selectorName: 'id', selector: `#${value}` });
+    return self;
+  }
 
-  class(/* value */) {
-    throw new Error('Not implemented');
-  },
+  class(value) {
+    const self = new CssSelectorBuilder();
+    self.selectors = this.selectors.slice();
+    const prevSelector = self.selectors.pop();
+    if (self.order.slice(4).includes(prevSelector.selectorName)) {
+      throw new Error('Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element');
+    }
+    self.selectors.push(prevSelector);
+    self.selectors.push({ selectorName: 'class', selector: `.${value}` });
+    return self;
+  }
 
-  attr(/* value */) {
-    throw new Error('Not implemented');
-  },
+  attr(value) {
+    const self = new CssSelectorBuilder();
+    self.selectors = this.selectors.slice();
+    const prevSelector = self.selectors.pop();
+    if (self.order.slice(5).includes(prevSelector.selectorName)) {
+      throw new Error('Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element');
+    }
+    self.selectors.push(prevSelector);
+    self.selectors.push({ selectorName: 'attr', selector: `[${value}]` });
+    return self;
+  }
 
-  pseudoClass(/* value */) {
-    throw new Error('Not implemented');
-  },
+  pseudoClass(value) {
+    const self = new CssSelectorBuilder();
+    self.selectors = this.selectors.slice();
+    const prevSelector = self.selectors.pop();
+    if (self.order.slice(6).includes(prevSelector.selectorName)) {
+      throw new Error('Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element');
+    }
+    self.selectors.push(prevSelector);
+    self.selectors.push({ selectorName: 'pseudoClass', selector: `:${value}` });
+    return self;
+  }
 
-  pseudoElement(/* value */) {
-    throw new Error('Not implemented');
-  },
+  pseudoElement(value) {
+    const self = new CssSelectorBuilder();
+    self.selectors = this.selectors.slice();
+    const prevSelector = self.selectors.pop();
+    if (prevSelector) {
+      if (prevSelector.selectorName === 'pseudoElement') {
+        throw new Error('Element, id and pseudo-element should not occur more then one time inside the selector');
+      }
+      self.selectors.push(prevSelector);
+    }
+    self.selectors.push({ selectorName: 'pseudoElement', selector: `::${value}` });
+    return self;
+  }
 
-  combine(/* selector1, combinator, selector2 */) {
-    throw new Error('Not implemented');
-  },
-};
+  combine(selector1, combinator, selector2) {
+    const self = new CssSelectorBuilder();
+    self.selectors = this.selectors.slice();
+    self.selectors = self.selectors.concat(selector1.selectors, ' ', combinator, ' ', selector2.selectors);
+    return self;
+  }
+
+  stringify() {
+    const str = this.selectors.map((currSelector) => (typeof (currSelector) === 'object' ? currSelector.selector : currSelector)).join('');
+    return str;
+  }
+}
+const cssSelectorBuilder = new CssSelectorBuilder();
 
 
 module.exports = {
